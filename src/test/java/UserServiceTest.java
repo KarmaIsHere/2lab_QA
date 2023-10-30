@@ -3,15 +3,18 @@ import org.deskify.model.domain.AccountType;
 import org.deskify.model.domain.User;
 import org.deskify.repository.UserRepository;
 import org.deskify.service.UserService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 class UserServiceTest {
@@ -21,20 +24,28 @@ class UserServiceTest {
 
     private UserService userService;
 
+    List<User> expectedUsers = new ArrayList<>();
+
     @BeforeEach
     void setUp() {
         MockitoAnnotations.initMocks(this);
         userService = new UserService(userRepository);
     }
 
+    @AfterEach
+    public void cleanUp() {
+        expectedUsers.clear();
+    }
+
     @Test
-    void testCreateUser() {
-        CreateUserRequest request = new CreateUserRequest();
-        request.setUsername("john.doe");
-        request.setPassword("password");
-        request.setFirstName("John");
-        request.setLastName("Doe");
-        request.setEmail("john.doe@example.com");
+    void createUserShouldCreateUserClassFromRequest() {
+        CreateUserRequest request = CreateUserRequest.builder()
+                .username("john.doe")
+                .password("password")
+                .firstName("John")
+                .lastName("Doe")
+                .email("john.doe@example.com")
+                .build();
 
         User user = User.builder()
                 .username(request.getUsername())
@@ -57,12 +68,12 @@ class UserServiceTest {
         assertEquals(user.getAccountType(), result.getAccountType());
     }
 
+
     @Test
-    void testFetchUsers() {
+    void fetchUsersShouldReturnAllUsers() {
         User user1 = new User(2L, "jane_smith", "password123", "Jane", AccountType.ADMIN,"Smith" ,"jane.smith@example.com");
         User user2 = new User(3L, "bob_johnson", "password123", "Bob", AccountType.USER, "Johnson","bob.johnson@example.com");
 
-        List<User> expectedUsers = new ArrayList<>();
         expectedUsers.add(user1);
         expectedUsers.add(user2);
         when(userRepository.findAll()).thenReturn(expectedUsers);
@@ -74,11 +85,11 @@ class UserServiceTest {
     }
 
     @Test
-    void testFetchUsers_ByFirstName() {
-        List<User> expectedUsers = new ArrayList<>();
+    void fetchUsersByFirstNameShouldReturnUsersByFirstName() {
+        String firstName = "John";
         expectedUsers.add(new User(1L, "john123", "password", "John", AccountType.USER, "Doe", "john.doe@example.com"));
 
-        when(userRepository.findAllByFirstName("John")).thenReturn(expectedUsers);
+        when(userRepository.findAllByFirstName(firstName)).thenReturn(expectedUsers);
 
         List<User> actualUsers = userService.fetchUsers(null, null,firstName, null, null);
 
@@ -86,22 +97,22 @@ class UserServiceTest {
     }
 
     @Test
-    void testFetchUsers_ByLastName() {
-        List<User> expectedUsers = new ArrayList<>();
+    void fetchUsersByLastNameShouldReturnUsersByLastName() {
+        String lastName = "Doe";
         expectedUsers.add(new User(1L, "john123", "password", "John", AccountType.USER, "Doe", "john.doe@example.com"));
 
-        when(userRepository.findAllByLastName("Doe")).thenReturn(expectedUsers);
+        when(userRepository.findAllByLastName(lastName)).thenReturn(expectedUsers);
 
         List<User> actualUsers = userService.fetchUsers(null, null,null, lastName, null);
 
         assertEquals(expectedUsers, actualUsers);
     }
     @Test
-    void testFetchUsers_ByNonExistantLastName() {
-        List<User> expectedUsers = new ArrayList<>();
+    void fetchUsersByNonExistantLastNameShouldReturnNull() {
+        String lastName = "Marston";
         expectedUsers.add(null);
 
-        when(userRepository.findAllByLastName("Marston")).thenReturn(expectedUsers);
+        when(userRepository.findAllByLastName(lastName)).thenReturn(expectedUsers);
 
         List<User> actualUsers = userService.fetchUsers(null, null,null, lastName, null);
 
@@ -109,11 +120,11 @@ class UserServiceTest {
     }
 
     @Test
-    void testFetchUsers_ByEmail() {
-        List<User> expectedUsers = new ArrayList<>();
+    void fetchUsersByEmailShouldReturnUsersByEmail() {
+        String email = "Doe";
         expectedUsers.add(new User(1L, "john123", "password", "John", AccountType.USER, "Doe", "john.doe@example.com"));
 
-        when(userRepository.findAllByEmail("john.doe@example.com")).thenReturn(expectedUsers);
+        when(userRepository.findAllByEmail(email)).thenReturn(expectedUsers);
 
         List<User> actualUsers = userService.fetchUsers(null, null, null, null,  email);
 
@@ -121,9 +132,8 @@ class UserServiceTest {
     }
 
     @Test
-    void testFetchUsers_ByNonExistantId() {
+    void fetchUsersByNonExistantIdShouldReturnNull() {
         Long id = 1L;
-        List<User> expectedUsers = new ArrayList<>();
         expectedUsers.add(null);
 
         when(userRepository.findAllById(id)).thenReturn(expectedUsers);
@@ -134,9 +144,8 @@ class UserServiceTest {
     }
 
     @Test
-    void testFetchUsers_ById() {
+    void fetchUsersByIdShouldReturnUserById() {
         Long id = 3L;
-        List<User> expectedUsers = new ArrayList<>();
         expectedUsers.add(new User(1L, "john123", "password", "John", AccountType.USER, "Doe", "john.doe@example.com"));
 
         when(userRepository.findAllById(id)).thenReturn(expectedUsers);
@@ -147,7 +156,7 @@ class UserServiceTest {
     }
 
     @Test
-    public void testDeleteUser_ByUsername() {
+    public void deleteUserShoudDeleteUserById() {
         Long id = 1L;
         User user = User.builder()
                 .id(id)
@@ -167,7 +176,7 @@ class UserServiceTest {
     }
 
     @Test
-    void testUpdateUserInformation() {
+    void updateUserShouldUpdateAllFields() {
         Long id = 1L;
         String newUsername = "new_username";
         String newPassword = "new_password";
@@ -176,14 +185,14 @@ class UserServiceTest {
         AccountType newAccountType = AccountType.ADMIN;
         String newEmail = "new_email@example.com";
 
-        User user = new User();
-        user.setId(id);
-        user.setUsername("username");
-        user.setPassword("password");
-        user.setFirstName("first_name");
-        user.setLastName("last_name");
-        user.setAccountType(AccountType.USER);
-        user.setEmail("email@example.com");
+        User user = User.builder()
+                .id(id).username("username")
+                .password("password")
+                .firstName("first_name")
+                .lastName("last_name")
+                .accountType(AccountType.USER)
+                .email("email@example.com")
+                .build();
 
         when(userRepository.findUserById(id)).thenReturn(user);
 
@@ -200,5 +209,7 @@ class UserServiceTest {
 
         verify(userRepository, times(1)).save(user);
     }
+
+
 
 }
