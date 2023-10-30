@@ -9,6 +9,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+import static org.deskify.utils.Validator.isValidEmail;
+
 @Service
 public class UserService {
     private final UserRepository userRepository;
@@ -18,64 +20,74 @@ public class UserService {
         this.userRepository = userRepository;
     }
 
-    // Creates user object
-    public User create(CreateUserRequest request) {
-        User user = new User();
-        user.setUsername(request.getUsername());
-        user.setPassword(request.getPassword());
-        user.setFirstName(request.getFirstName());
-        user.setLastName(request.getLastName());
-        user.setAccountType(AccountType.USER);
-        user.setEmail(request.getEmail());
+    public User createUser(CreateUserRequest request) {
+        User user = User.builder()
+                .username(request.getUsername())
+                .password(request.getPassword())
+                .firstName(request.getFirstName())
+                .lastName(request.getLastName())
+                .accountType(AccountType.USER)
+                .email(request.getEmail())
+                .build();
+
+        if (!validateUser(user)) {
+            throw new IllegalArgumentException("Username or email is already taken");
+        }
+        if (!isValidEmail(request.getEmail())){
+            throw new IllegalArgumentException("Incorrect email");
+        }
 
         return userRepository.save(user);
     }
 
-    // Fetches user by provided parameter
-    public List<User> fetch(Long id, String username, String firstName,  String lastName,  String email) {
-        if (id != null) {
-            return this.userRepository.findAllById(id);
-        } else if (username != null) {
-            return this.userRepository.findAllByUsername(username);
-        } else if (firstName != null) {
-            return this.userRepository.findAllByFirstName(firstName);
-        } else if (lastName != null) {
-            return this.userRepository.findAllByLastName(lastName);
-        } else if (email != null) {
-            return this.userRepository.findAllByEmail(email);
-        } else {
-            return this.userRepository.findAll();
-        }
+    public boolean validateUser(User user) {
+        if (!fetchUsers(null, user.getUsername(), null,null,null).isEmpty()) return false;
+        return fetchUsers(null, null,null,null, user.getEmail()).isEmpty();
     }
 
-    // Updates user fields by provided parameters
-    public void update(Long id, String Username, String Password, String FirstName, String LastName, AccountType AccountType, String Email) {
+    public List<User> fetchUsers(Long id, String username, String firstName, String lastName, String email) {
+        return (id != null) ? this.userRepository.findAllById(id)
+                : (username != null) ? this.userRepository.findAllByUsername(username)
+                : (firstName != null) ? this.userRepository.findAllByFirstName(firstName)
+                : (lastName != null) ? this.userRepository.findAllByLastName(lastName)
+                : (email != null) ? this.userRepository.findAllByEmail(email)
+                : this.userRepository.findAll();
+    }
+
+    public void updateUserInformation(Long id, String newUsername, String newPassword, String newFirstName, String newLastName, AccountType newAccountType, String newEmail) {
         User user = userRepository.findUserById(id);
+        boolean userUpdated = false;
 
-        if (Username != null) {
-            user.setUsername(Username);
+        if (newUsername != null) {
+            user.setUsername(newUsername);
+            userUpdated = true;
         }
-        if (Password != null) {
-            user.setPassword(Password);
+        if (newPassword != null) {
+            user.setPassword(newPassword);
+            userUpdated = true;
         }
-        if (FirstName != null) {
-            user.setFirstName(FirstName);
+        if (newFirstName != null) {
+            user.setFirstName(newFirstName);
+            userUpdated = true;
         }
-        if (LastName != null) {
-            user.setLastName(LastName);
+        if (newLastName != null) {
+            user.setLastName(newLastName);
+            userUpdated = true;
         }
-        if (AccountType != null) {
-            user.setAccountType(AccountType);
+        if (newAccountType != null) {
+            user.setAccountType(newAccountType);
+            userUpdated = true;
         }
-        if (Email != null) {
-            user.setEmail(Email);
+        if (newEmail != null) {
+            user.setEmail(newEmail);
+            userUpdated = true;
         }
-
-        userRepository.save(user);
+        if (userUpdated) {
+            userRepository.save(user);
+        }
     }
 
-    // Deletes provided user
-    public void delete(Long id) {
+    public void deleteUserByUsername(Long id) {
         User user = userRepository.findUserById(id);
         userRepository.deleteById(user.getId());
     }
